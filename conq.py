@@ -21,7 +21,7 @@ def angle(pos1, pos2):
     return math.atan2(pos2[1] - pos1[1], pos2[0] - pos1[0])
 
 class Player(object):
-    def __init__(self, name=None, color=WHITE, reaction=300):
+    def __init__(self, name=None, color=WHITE, reaction=150):
         self.name = name
         self.color = color
         self.planets = []
@@ -151,13 +151,13 @@ class Game(object):
         self.player = Player('me', BLUE)
         self.award_planet(self.planets[0], self.player)
         self.npcs = []
-        self.npcs.append(Player('npc', RED))
+        self.npcs.append(Player('npc', RED, 150))
         self.award_planet(self.planets[1], self.npcs[-1])
-        self.npcs.append(Player('npc', GREEN))
+        self.npcs.append(Player('npc', GREEN, 100))
         self.award_planet(self.planets[2], self.npcs[-1])
-        self.npcs.append(Player('npc', PURPLE))
+        self.npcs.append(Player('npc', PURPLE, 450))
         self.award_planet(self.planets[3], self.npcs[-1])
-        self.npcs.append(Player('npc', YELLOW))
+        self.npcs.append(Player('npc', YELLOW, 100))
         self.award_planet(self.planets[4], self.npcs[-1])
         self.fleet_percent = 0.
         self.fleet_source = None
