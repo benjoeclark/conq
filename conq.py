@@ -8,16 +8,59 @@ import math
 BLACK = (0, 0, 0)
 BLUE = (0, 0, 255)
 RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+PURPLE = (255, 0, 255)
+YELLOW = (255, 255, 0)
 WHITE = (255, 255, 255)
 FPS = 30
 
 def dist(pos1, pos2):
     return math.sqrt((pos1[0] - pos2[0])**2 + (pos1[1] - pos2[1])**2)
 
+def angle(pos1, pos2):
+    return math.atan2(pos2[1] - pos1[1], pos2[0] - pos1[0])
+
 class Player(object):
-    def __init__(self, name=None, color=WHITE):
+    def __init__(self, name=None, color=WHITE, reaction=300):
         self.name = name
         self.color = color
+        self.planets = []
+        self.reaction = reaction
+        self.reaction_count = 0
+        self.dead = False
+
+    def check_pulse(self, game):
+        if len(self.planets) == 0:
+            self.dead = True
+            for fleet in game.fleets:
+                if fleet.owner == self:
+                    self.dead = False
+
+    def update(self, game):
+        self.check_pulse(game)
+        if self.dead:
+            return []
+        self.reaction_count += 1
+        if self.reaction_count >= self.reaction and len(self.planets) > 0:
+            self.reaction_count = 0
+            largest_source = self.planets[0]
+            for planet in self.planets[1:]:
+                if planet.garrison > largest_source.garrison:
+                    largest_source = planet
+            other_planets = []
+            for planet in game.planets:
+                if planet not in self.planets:
+                    other_planets.append(planet)
+            closest_target = other_planets[0]
+            closest_dist = dist(largest_source.position, closest_target.position)
+            for planet in other_planets[1:]:
+                d = dist(planet.position, largest_source.position)
+                if closest_dist > d:
+                    closest_target = planet
+                    closest_dist = d
+            return [largest_source.get_fleet(closest_target, 0.5)]
+        return []
+        
 
 class Fleet(object):
     def __init__(self, owner, size, origin, target):
@@ -60,14 +103,23 @@ class Planet(object):
         self.garrison -= percent * self.garrison
         return Fleet(self.owner, fleet_size, self, target)
 
+    def get_fleet_percent(self, pos):
+        selected_angle = angle(self.position, pos)
+        if selected_angle < 0.:
+            selected_angle += 2. * math.pi
+        return selected_angle / (2. * math.pi)
+
     def invade(self, fleet):
         if self.owner.name is None:
             self.owner = fleet.owner
+            self.owner.planets.append(self)
         elif self.owner == fleet.owner:
             self.garrison += fleet.size
         else:
             if fleet.size > self.garrison:
+                self.owner.planets.remove(self)
                 self.owner = fleet.owner
+                self.owner.planets.append(self)
                 self.garrison = fleet.size - self.garrison
             else:
                 self.garrison -= fleet.size
@@ -83,7 +135,7 @@ class Planet(object):
         pygame.draw.circle(self.screen, self.owner.color, self.position, self.size, 0)
 
 class Game(object):
-    def __init__(self, width=640, height=480, background=BLACK):
+    def __init__(self, width=800, height=600, background=BLACK):
         pygame.init()
         self.clock = pygame.time.Clock()
         self.width = width
@@ -97,12 +149,28 @@ class Game(object):
         self.planets = []
         self.generate_planets()
         self.player = Player('me', BLUE)
-        self.npc = Player('npc', RED)
-        self.planets[0].owner = self.player
-        self.planets[1].owner = self.npc
+        self.award_planet(self.planets[0], self.player)
+        self.npcs = []
+        self.npcs.append(Player('npc', RED))
+        self.award_planet(self.planets[1], self.npcs[-1])
+        self.npcs.append(Player('npc', GREEN))
+        self.award_planet(self.planets[2], self.npcs[-1])
+        self.npcs.append(Player('npc', PURPLE))
+        self.award_planet(self.planets[3], self.npcs[-1])
+        self.npcs.append(Player('npc', YELLOW))
+        self.award_planet(self.planets[4], self.npcs[-1])
+        self.fleet_percent = 0.
+        self.fleet_source = None
         self.play()
 
-    def generate_planets(self, planet_count=10):
+    def award_planet(self, planet, player):
+        previous_owner = planet.owner
+        planet.owner = player
+        player.planets.append(planet)
+        if previous_owner.name is not None:
+            previous_owner.planets.remove(planet)
+
+    def generate_planets(self, planet_count=20):
         for count in range(planet_count):
             pos, rad = self.new_position()
             self.planets.append(Planet(self.screen, pos, rad))
@@ -130,6 +198,20 @@ class Game(object):
         return True
 
     def update(self):
+        self.player.check_pulse(self)
+        if self.player.dead:
+            print 'game over, you lose'
+            self.done = True
+            return
+        all_dead = True
+        for npc in self.npcs:
+            if not npc.dead:
+                all_dead = False
+                self.fleets.extend(npc.update(self))
+        if all_dead:
+            print 'game over, you win'
+            self.done = True
+            return
         self.screen.fill(BLACK)
         to_remove = []
         for fleet in self.fleets:
@@ -151,9 +233,19 @@ class Game(object):
                     pygame.quit()
                     sys.exit()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    for planet in self.planets[1:]:
+                    for planet in self.planets:
                         if planet.collision(event.pos, 0):
-                            self.fleets.append(self.planets[0].get_fleet(planet))
+                            if planet.owner == self.player:
+                                self.fleet_percent = planet.get_fleet_percent(event.pos)
+                                self.fleet_source = planet
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    for planet in self.planets:
+                        if planet.collision(event.pos, 0):
+                            if self.fleet_percent > 0.:
+                                if self.fleet_source != planet:
+                                    self.fleets.append(self.fleet_source.get_fleet(planet, self.fleet_percent))
+                    self.fleet_percent = 0.
+                    self.fleet_source = None
             msElapsed = self.clock.tick(FPS)
         
 
