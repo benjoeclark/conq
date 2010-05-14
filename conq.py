@@ -71,6 +71,8 @@ class Planet(object):
                 self.garrison = fleet.size - self.garrison
             else:
                 self.garrison -= fleet.size
+        if self.garrison >= self.radius - self.size - 5:
+            self.garrison = self.radius - self.size - 5
 
     def update(self):
         if self.owner.name is not None:
