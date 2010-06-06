@@ -6,6 +6,7 @@ import sys
 import math
 
 BLACK = (0, 0, 0)
+ATMOSPHERE = (10, 10, 10)
 BLUE = (0, 0, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
@@ -82,7 +83,8 @@ class Fleet(object):
         self.position[1] + self.velocity * (self.target.position[1] - self.position[1]) / d)
         self.position = pos
         pygame.draw.lines(self.target.screen, WHITE, False, [self.position, self.target.position], 1)
-        pygame.draw.circle(self.target.screen, self.owner.color, self.position, self.size, 0)
+        int_pos = (int(self.position[0]), int(self.position[1]))
+        pygame.draw.circle(self.target.screen, self.owner.color, int_pos, int(self.size), 0)
         
 
 class Planet(object):
@@ -105,11 +107,17 @@ class Planet(object):
         self.garrison -= percent * self.garrison
         return Fleet(self.owner, fleet_size, self, target)
 
-    def get_fleet_percent(self, pos):
+    def get_fleet_percent_by_angle(self, pos):
         selected_angle = angle(self.position, pos)
         if selected_angle < 0.:
             selected_angle += 2. * math.pi
         return selected_angle / (2. * math.pi)
+
+    def get_fleet_percent(self, pos):
+        selected_dist = dist(self.position, pos)
+        if selected_dist < 1:
+            selected_dist = 1
+        return selected_dist / self.radius
 
     def invade(self, fleet):
         if self.owner.name is None:
@@ -129,6 +137,7 @@ class Planet(object):
             self.garrison = self.radius - self.size - 5
 
     def update(self):
+        pygame.draw.circle(self.screen, ATMOSPHERE, self.position, self.radius, 0)
         if self.owner.name is not None:
             if self.garrison < self.radius - self.size - 5:
                 self.garrison += self.size / 1000.
@@ -215,6 +224,8 @@ class Game(object):
             self.done = True
             return
         self.screen.fill(BLACK)
+        for planet in self.planets:
+            planet.update()
         to_remove = []
         for fleet in self.fleets:
             if not fleet.reached_target:
@@ -223,8 +234,6 @@ class Game(object):
                 to_remove.append(fleet)
         for fleet in to_remove:
             self.fleets.remove(fleet)
-        for planet in self.planets:
-            planet.update()
         pygame.display.update()
 
     def play(self):
