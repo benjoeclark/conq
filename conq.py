@@ -51,6 +51,8 @@ class Player(object):
             for planet in game.planets:
                 if planet not in self.planets:
                     other_planets.append(planet)
+            if len(other_planets) == 0:
+                return []
             closest_target = other_planets[0]
             closest_dist = dist(largest_source.position, closest_target.position)
             for planet in other_planets[1:]:
