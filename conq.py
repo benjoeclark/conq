@@ -123,6 +123,7 @@ class Planet(object):
         if self.owner.name is None:
             self.owner = fleet.owner
             self.owner.planets.append(self)
+            self.garrison += fleet.size
         elif self.owner == fleet.owner:
             self.garrison += fleet.size
         else:
@@ -141,6 +142,8 @@ class Planet(object):
         if self.owner.name is not None:
             if self.garrison < self.radius - self.size - 5:
                 self.garrison += self.size / 1000.
+                if self.garrison < 0:
+                    self.garrison = 0
             pygame.draw.arc(self.screen, self.owner.color, self.rect,
                             0., 2.*math.pi, int(self.garrison))
         pygame.draw.circle(self.screen, self.owner.color, self.position, self.size, 0)
