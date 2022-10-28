@@ -91,7 +91,7 @@ class Planet(object):
     def __init__(self, screen, pos=None, rad=None):
         self.owner = Player()
         self.garrison = 0.
-        self.size = random.randint(5, rad/2)
+        self.size = random.randint(5, rad//2)
         self.screen = screen
         self.position = pos
         self.radius = rad
@@ -214,7 +214,7 @@ class Game(object):
     def update(self):
         self.player.check_pulse(self)
         if self.player.dead:
-            print 'game over, you lose'
+            print('game over, you lose')
             self.done = True
             return
         all_dead = True
@@ -223,7 +223,7 @@ class Game(object):
                 all_dead = False
                 self.fleets.extend(npc.update(self))
         if all_dead:
-            print 'game over, you win'
+            print('game over, you win')
             self.done = True
             return
         self.screen.fill(BLACK)
