@@ -213,7 +213,7 @@ class Game(object):
 
     def update(self):
         self.player.check_pulse(self)
-        if self.player.dead:
+        if self.player.dead and '-w' not in sys.argv:
             print('game over, you lose')
             self.done = True
             return
